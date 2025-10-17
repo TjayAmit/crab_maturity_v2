@@ -1,0 +1,21 @@
+flutter_native_splash:
+  # Background color of the splash screen
+  color: "#ffffff"
+
+  # Main logo in the center
+  image: assets/logo/logo.png
+
+  # Optional: you can specify a dark mode variant if you ever add one
+  # color_dark: "#000000"
+  # image_dark: assets/logo/zcmc_dark.png
+
+  # Android 12+ configuration
+  android_12:
+    # Use the same centered logo for Android 12 splash
+    # image: assets/logo/zcmc.png
+    color: "#ffffff"
+
+  # Keep logo centered for all platforms
+  android_gravity: center
+  ios_content_mode: center
+  web_image_mode: center
