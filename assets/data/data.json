@@ -1,0 +1,64 @@
+{
+  "crabs": [
+    {
+      "name": "Curacha Male",
+      "common_name": "Spanner Crab",
+      "scientific_name": "Ranina ranina",
+      "description": {
+        "overview": "The Curacha, also known as the Spanner Crab, is a reddish-brown crab species found in the Indo-Pacific region. Males have narrow abdominal flaps and slightly longer legs.",
+        "habitat": "Sandy seabeds from 10 to 100 meters deep.",
+        "diet": "Feeds on small fish, mollusks, and ocean floor detritus."
+      },
+      "images": [
+        "assets/images/curacha_male1.jpg",
+        "assets/images/curacha_male2.jpg",
+        "assets/images/curacha_male3.jpg"
+      ]
+    },
+    {
+      "name": "Curacha Female",
+      "common_name": "Spanner Crab",
+      "scientific_name": "Ranina ranina",
+      "description": {
+        "overview": "Female Curacha crabs have rounder, wider abdominal flaps used to carry eggs. They tend to be slightly larger-bodied but have smaller claws.",
+        "habitat": "Sandy coastal waters near coral reefs.",
+        "diet": "Consumes small crustaceans and shellfish."
+      },
+      "images": [
+        "assets/images/curacha_female1.jpg",
+        "assets/images/curacha_female2.jpg",
+        "assets/images/curacha_female3.jpg"
+      ]
+    },
+    {
+      "name": "Blue Crab Male",
+      "common_name": "Blue Swimming Crab",
+      "scientific_name": "Portunus pelagicus",
+      "description": {
+        "overview": "The male Blue Crab has bright blue claws and a narrow, T-shaped abdominal flap. It is fast and often found in shallow waters.",
+        "habitat": "Sandy and muddy bays and estuaries.",
+        "diet": "Eats fish, mollusks, and other crabs."
+      },
+      "images": [
+        "assets/images/blue_male1.jpg",
+        "assets/images/blue_male2.jpg",
+        "assets/images/blue_male3.jpg"
+      ]
+    },
+    {
+      "name": "Blue Crab Female",
+      "common_name": "Blue Swimming Crab",
+      "scientific_name": "Portunus pelagicus",
+      "description": {
+        "overview": "Female Blue Crabs have red-tipped claws and a wide, rounded abdominal flap. They are known for carrying eggs under their abdomen.",
+        "habitat": "Coastal seagrass beds and estuaries.",
+        "diet": "Omnivorous — consumes plants and small invertebrates."
+      },
+      "images": [
+        "assets/images/blue_female1.jpg",
+        "assets/images/blue_female2.jpg",
+        "assets/images/blue_female3.jpg"
+      ]
+    }
+  ]
+}
