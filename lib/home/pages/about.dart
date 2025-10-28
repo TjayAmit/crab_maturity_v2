@@ -49,7 +49,7 @@ class AboutScreen extends StatelessWidget {
               _buildInfoCard(
                 title: '👥 Development Team',
                 content:
-                    'Developed by the CrabWatch Team:\n\n• Juan Dela Cruz – Lead Developer\n• Maria Santos – Machine Learning Engineer\n• Pedro Reyes – UI/UX Designer\n• Ana Lopez – Data Analyst\n\nGuided by: Prof. Jose Ramirez, Project Adviser',
+                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul \n• Aim Convocar\n• Pedro Reyes\n• Fred Tan\n\nGuided by: Sir Sherards, Project Adviser',
               ),
               const SizedBox(height: 20),
               Text(
