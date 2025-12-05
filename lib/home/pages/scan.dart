@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
+import 'package:crab_maturity_ml_app/home/pages/crab_detail_view.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -24,12 +25,16 @@ class _ScanScreenState extends State<ScanScreen> {
   Interpreter? _interpreter;
   List<String> _classNames = [];
   bool _isModelLoaded = false;
-  bool _isProcessing = false;
+  bool _isScanning = false;
   
   // Inference results
   String? _predictedClass;
   double? _confidence;
-  Map<String, double>? _allPredictions;
+  
+  // Multi-attempt scanning
+  int _currentAttempt = 0;
+  final int _maxAttempts = 7;
+  Map<String, double> _attemptResults = {}; // model_name -> highest confidence
 
   @override
   void initState() {
@@ -96,9 +101,6 @@ class _ScanScreenState extends State<ScanScreen> {
       if (!mounted) return;
       
       setState(() => _isCameraInitialized = true);
-      
-      // Start continuous inference
-      _startContinuousInference();
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to initialize camera: $e';
@@ -106,41 +108,128 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  // Start taking pictures and running inference continuously
-  void _startContinuousInference() {
-    if (!_isModelLoaded || _cameraController == null) return;
+  // Start multi-attempt scanning
+  Future<void> _startScanning() async {
+    if (_isScanning || !_isModelLoaded || _cameraController == null) {
+      print('Cannot start scan: isScanning=$_isScanning, modelLoaded=$_isModelLoaded');
+      return;
+    }
     
-    // Run inference every 500ms
-    Future.delayed(const Duration(milliseconds: 500), () async {
-      if (!mounted || _cameraController == null || !_cameraController!.value.isInitialized) {
-        return;
+    setState(() {
+      _isScanning = true;
+      _currentAttempt = 0;
+      _attemptResults.clear();
+      _predictedClass = null;
+      _confidence = null;
+    });
+
+    print('Starting scan with $_maxAttempts attempts');
+
+    // Perform 7 attempts
+    for (int i = 0; i < _maxAttempts; i++) {
+      if (!mounted || !_isScanning) {
+        print('Scan interrupted at attempt ${i + 1}');
+        break;
       }
       
+      setState(() => _currentAttempt = i + 1);
+      print('Scan attempt ${i + 1}/$_maxAttempts');
+      
       await _captureAndInfer();
-      _startContinuousInference(); // Continue loop
-    });
+      
+      // Small delay between captures
+      if (i < _maxAttempts - 1) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }
+
+    print('Scan complete. Results: $_attemptResults');
+
+    // Find the model with highest confidence across all attempts
+    if (_attemptResults.isNotEmpty) {
+      String bestModel = '';
+      double bestConfidence = 0.0;
+      
+      _attemptResults.forEach((model, confidence) {
+        if (confidence > bestConfidence) {
+          bestConfidence = confidence;
+          bestModel = model;
+        }
+      });
+
+      print('Best result: $bestModel with $bestConfidence confidence');
+
+      setState(() {
+        _predictedClass = bestModel;
+        _confidence = bestConfidence;
+        _isScanning = false;
+      });
+
+      // Navigate to detail view with confidence
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CrabDetailView(
+              model: bestModel,
+              confidence: bestConfidence,
+            ),
+          ),
+        ).then((_) {
+          // Reset after returning
+          setState(() {
+            _predictedClass = null;
+            _confidence = null;
+            _attemptResults.clear();
+          });
+        });
+      }
+    } else {
+      print('No results from scanning');
+      setState(() => _isScanning = false);
+      
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to detect crab. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // Capture image and run inference
   Future<void> _captureAndInfer() async {
-    if (_isProcessing || !_isModelLoaded) return;
+    if (!_isModelLoaded || _cameraController == null || !_cameraController!.value.isInitialized) {
+      print('Cannot capture: modelLoaded=$_isModelLoaded, cameraReady=${_cameraController?.value.isInitialized}');
+      return;
+    }
     
     try {
-      _isProcessing = true;
-      
+      print('Taking picture...');
       final XFile imageFile = await _cameraController!.takePicture();
+      print('Picture taken: ${imageFile.path}');
+      
       final Uint8List imageBytes = await imageFile.readAsBytes();
       
       // Decode and preprocess image
       img.Image? image = img.decodeImage(imageBytes);
-      if (image == null) return;
+      if (image == null) {
+        print('Failed to decode image');
+        return;
+      }
+      
+      print('Image decoded: ${image.width}x${image.height}');
       
       // Resize to 224x224 (matching your training size)
       img.Image resizedImage = img.copyResize(image, width: 224, height: 224);
+      print('Image resized to 224x224');
       
       // Convert to Float32List with MobileNetV2 preprocessing
-      // Values should be in [-1, 1] range
       var inputImage = _imageToByteListFloat32(resizedImage);
+      print('Image preprocessed, size: ${inputImage.length}');
       
       // Reshape for model input: [1, 224, 224, 3]
       var input = inputImage.reshape([1, 224, 224, 3]);
@@ -149,7 +238,9 @@ class _ScanScreenState extends State<ScanScreen> {
       var outputBuffer = List.filled(_classNames.length, 0.0).reshape([1, _classNames.length]);
       
       // Run inference
+      print('Running inference...');
       _interpreter!.run(input, outputBuffer);
+      print('Inference complete');
       
       // Process results
       List<double> probabilities = outputBuffer[0].cast<double>();
@@ -157,31 +248,34 @@ class _ScanScreenState extends State<ScanScreen> {
       // Get top prediction
       int maxIndex = 0;
       double maxProb = probabilities[0];
-      Map<String, double> allPreds = {};
       
       for (int i = 0; i < probabilities.length; i++) {
-        allPreds[_classNames[i]] = probabilities[i];
         if (probabilities[i] > maxProb) {
           maxProb = probabilities[i];
           maxIndex = i;
         }
       }
       
-      // Sort predictions by confidence
-      var sortedPreds = allPreds.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      allPreds = Map.fromEntries(sortedPreds.take(3)); // Top 3
+      String predictedModel = _classNames[maxIndex];
+      print('Predicted: $predictedModel with confidence $maxProb');
       
-      setState(() {
-        _predictedClass = _classNames[maxIndex];
-        _confidence = maxProb;
-        _allPredictions = allPreds;
-      });
+      // Store if this is the highest confidence for this model
+      if (!_attemptResults.containsKey(predictedModel) || 
+          maxProb > _attemptResults[predictedModel]!) {
+        _attemptResults[predictedModel] = maxProb;
+      }
       
-    } catch (e) {
+      // Update current display
+      if (mounted) {
+        setState(() {
+          _predictedClass = predictedModel;
+          _confidence = maxProb;
+        });
+      }
+      
+    } catch (e, stackTrace) {
       print('❌ Inference error: $e');
-    } finally {
-      _isProcessing = false;
+      print('Stack trace: $stackTrace');
     }
   }
 
@@ -207,6 +301,14 @@ class _ScanScreenState extends State<ScanScreen> {
     }
 
     return convertedBytes;
+  }
+
+  // Format model name: curacha_male -> Curacha Male
+  String _formatModelName(String modelName) {
+    return modelName
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 
   @override
@@ -241,9 +343,9 @@ class _ScanScreenState extends State<ScanScreen> {
                             height: 250,
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: _confidence != null && _confidence! > 0.7
-                                    ? Colors.green
-                                    : Colors.amberAccent,
+                                color: _isScanning
+                                    ? Colors.amber
+                                    : Colors.white.withOpacity(0.5),
                                 width: 3,
                               ),
                               borderRadius: BorderRadius.circular(16),
@@ -251,102 +353,135 @@ class _ScanScreenState extends State<ScanScreen> {
                           ),
                         ),
 
-                        // 📊 Results overlay
-                        if (_predictedClass != null)
+                        // 📊 Top-right results overlay (minimal)
+                        if (_predictedClass != null && _confidence != null)
                           Positioned(
                             top: 60,
-                            left: 20,
                             right: 20,
                             child: Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    '🦀 $_predictedClass',
+                                    _formatModelName(_predictedClass!),
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 24,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
                                   Text(
-                                    'Confidence: ${(_confidence! * 100).toStringAsFixed(1)}%',
+                                    '${(_confidence! * 100).toStringAsFixed(1)}%',
                                     style: TextStyle(
                                       color: _confidence! > 0.7 
                                           ? Colors.greenAccent 
                                           : Colors.orangeAccent,
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Top Predictions:',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  ..._allPredictions!.entries.map((entry) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            entry.key,
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${(entry.value * 100).toStringAsFixed(1)}%',
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
                                 ],
                               ),
                             ),
                           ),
 
-                        // 🔤 Instruction text
+                        // Scan progress indicator
+                        if (_isScanning)
+                          Positioned(
+                            top: 60,
+                            left: 20,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Scanning $_currentAttempt/$_maxAttempts',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // 🔘 Scan button at bottom
                         Positioned(
-                          bottom: 60,
+                          bottom: 40,
                           left: 0,
                           right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Text(
-                              _isProcessing 
-                                  ? 'Processing...' 
-                                  : 'Align the crab inside the box to scan',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black,
-                                    blurRadius: 4,
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Text(
+                                  _isScanning
+                                      ? 'Scanning in progress...'
+                                      : 'Align the crab inside the box',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black,
+                                        blurRadius: 4,
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton(
+                                  onPressed: _isScanning ? null : _startScanning,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isScanning 
+                                        ? Colors.grey 
+                                        : Colors.amber,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 48,
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    elevation: 8,
+                                    disabledBackgroundColor: Colors.grey,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _isScanning 
+                                            ? Icons.hourglass_empty 
+                                            : Icons.center_focus_strong,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        _isScanning ? 'Scanning...' : 'Start Scan',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),

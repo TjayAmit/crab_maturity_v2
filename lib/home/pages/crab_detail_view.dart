@@ -3,9 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class CrabDetailView extends StatefulWidget {
-  final int crabId;
+  final int? crabId;
+  final String? model;
+  final double? confidence; // Confidence score from scanning
 
-  const CrabDetailView({super.key, required this.crabId});
+  const CrabDetailView({
+    super.key, 
+    this.crabId,
+    this.model,
+    this.confidence,
+  }) : assert(crabId != null || model != null, 'Either crabId or model must be provided');
 
   @override
   State<CrabDetailView> createState() => _CrabDetailViewState();
@@ -25,32 +32,57 @@ class _CrabDetailViewState extends State<CrabDetailView> {
 
   Future<void> _loadCrabDetail() async {
     try {
+      if (!mounted) return;
+      
       setState(() {
         isLoading = true;
         errorMessage = null;
       });
 
-      print('https://crabwatch.online/api/crabs/${widget.crabId}');
+      // Build URL based on what parameter was provided
+      String url;
+      if (widget.crabId != null) {
+        url = 'https://crabwatch.online/api/crabs/${widget.crabId}';
+      } else {
+        url = 'https://crabwatch.online/api/crabs-by?model=${widget.model}';
+      }
 
-      final response = await http.get(
-        Uri.parse('https://crabwatch.online/api/crabs/${widget.crabId}'),
-      );
+      final response = await http.get(Uri.parse(url));
+
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        
+        // Both endpoints return the same structure: {data: {...}}
+        Map<String, dynamic>? crab = data['data'];
+        
+        if (crab == null || crab.isEmpty) {
+          if (!mounted) return;
+          setState(() {
+            errorMessage = 'No data found';
+            isLoading = false;
+          });
+          return;
+        }
+        
+        if (!mounted) return;
         setState(() {
-          crabData = data['data'];
+          crabData = crab;
           isLoading = false;
         });
       } else {
+        // Handle 500 or any non-200 status
+        if (!mounted) return;
         setState(() {
-          errorMessage = 'Failed to load crab details: ${response.statusCode}';
+          errorMessage = 'No data found';
           isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        errorMessage = 'Error loading data: $e';
+        errorMessage = 'No data found';
         isLoading = false;
       });
     }
@@ -79,37 +111,52 @@ class _CrabDetailViewState extends State<CrabDetailView> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
+              Icons.search_off,
+              size: 80,
+              color: Colors.grey,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            const Text(
+              'No Data Found',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF182659),
+              ),
+            ),
+            const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                errorMessage!,
+                'We couldn\'t find information for this crab.\nPlease try scanning again.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black54,
+                  color: Colors.grey[600],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _loadCrabDetail,
+              onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF182659),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+                  horizontal: 32,
+                  vertical: 14,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Retry'),
+              child: const Text(
+                'Go Back',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -128,6 +175,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
     final speciesType = crabData!['species_type'] ?? '';
     final gender = crabData!['gender'] ?? '';
     final description = crabData!['description'] ?? '';
+    final subjectTag = crabData!['subject_tag'] ?? '';
 
     return CustomScrollView(
       slivers: [
@@ -162,8 +210,12 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                           });
                         },
                         itemBuilder: (context, index) {
+                          final heroTag = widget.crabId != null 
+                              ? 'crab_${widget.crabId}'
+                              : 'crab_model_${widget.model}';
+                          
                           return Hero(
-                            tag: 'crab_${widget.crabId}',
+                            tag: heroTag,
                             child: Image.network(
                               attachments[index]['url'],
                               fit: BoxFit.cover,
@@ -253,6 +305,52 @@ class _CrabDetailViewState extends State<CrabDetailView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Scan result badge (only if from scanning)
+                if (widget.model != null && widget.confidence != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.confidence! > 0.7
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: widget.confidence! > 0.7
+                            ? Colors.green
+                            : Colors.orange,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.verified,
+                          color: widget.confidence! > 0.7
+                              ? Colors.green
+                              : Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Scan Result: ${(widget.confidence! * 100).toStringAsFixed(1)}% Confidence',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: widget.confidence! > 0.7
+                                ? Colors.green[800]
+                                : Colors.orange[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Name section
                 Text(
                   commonName,
@@ -346,11 +444,9 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                       itemBuilder: (context, index) {
                         return GestureDetector(
                           onTap: () {
-                            // Could implement full-screen image viewer here
                             setState(() {
                               currentImageIndex = index;
                             });
-                            // Scroll to top to show the image
                           },
                           child: Container(
                             width: 100,
