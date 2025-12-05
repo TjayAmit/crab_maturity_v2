@@ -49,7 +49,7 @@ class AboutScreen extends StatelessWidget {
               _buildInfoCard(
                 title: '👥 Development Team',
                 content:
-                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul \n• Aim Convocar\n• Pedro Reyes\n• Fred Tan\n\nGuided by: Sir Sherards, Project Adviser',
+                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul \n• Aim Convocar\n• Fred Tan\n\nGuided by: Sir Sherards, Project Adviser',
               ),
               const SizedBox(height: 20),
               Text(
