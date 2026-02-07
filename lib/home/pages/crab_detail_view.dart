@@ -1,17 +1,25 @@
 import 'dart:convert';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class CrabDetailView extends StatefulWidget {
   final int? crabId;
   final String? model;
   final double? confidence; // Confidence score from scanning
+  final XFile? imageFile; // Optional captured image
 
-  const CrabDetailView({super.key, this.crabId, this.model, this.confidence})
-    : assert(
-        crabId != null || model != null,
-        'Either crabId or model must be provided',
-      );
+  const CrabDetailView({
+    super.key,
+    this.crabId,
+    this.model,
+    this.confidence,
+    this.imageFile, // default is null if not provided
+  }) : assert(
+         crabId != null || model != null,
+         'Either crabId or model must be provided',
+       );
 
   @override
   State<CrabDetailView> createState() => _CrabDetailViewState();
@@ -38,15 +46,41 @@ class _CrabDetailViewState extends State<CrabDetailView> {
         errorMessage = null;
       });
 
-      // Build URL based on what parameter was provided
-      String url;
-      if (widget.crabId != null) {
-        url = 'https://crabwatch.online/api/crabs/${widget.crabId}';
-      } else {
-        url = 'https://crabwatch.online/api/crabs-by?model=${widget.model}';
-      }
+      http.Response response;
 
-      final response = await http.get(Uri.parse(url));
+      if (widget.imageFile != null) {
+        // If image exists, send POST with image upload
+        var uri = Uri.parse('https://crabwatch.online/api/crabs-by-image');
+        var request = http.MultipartRequest('POST', uri);
+
+        // Add image file
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            widget.imageFile!.path,
+            contentType: MediaType('image', 'jpeg'), // adjust if png
+          ),
+        );
+
+        // Add optional fields
+        if (widget.model != null) request.fields['model'] = widget.model!;
+        if (widget.confidence != null) {
+          request.fields['confidence'] = widget.confidence.toString();
+        }
+
+        final streamedResponse = await request.send();
+        response = await http.Response.fromStream(streamedResponse);
+      } else {
+        // Otherwise do GET
+        String url;
+        if (widget.crabId != null) {
+          url = 'https://crabwatch.online/api/crabs/${widget.crabId}';
+        } else {
+          url =
+              'https://crabwatch.online/api/crabs-by?model=${widget.model}&confidence=${widget.confidence}';
+        }
+        response = await http.get(Uri.parse(url));
+      }
 
       if (!mounted) return;
 
@@ -71,7 +105,6 @@ class _CrabDetailViewState extends State<CrabDetailView> {
           isLoading = false;
         });
       } else {
-        // Handle 500 or any non-200 status
         if (!mounted) return;
         setState(() {
           errorMessage = 'No data found';

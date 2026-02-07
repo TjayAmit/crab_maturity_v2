@@ -117,7 +117,9 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   // Start multi-attempt scanning
+  // Start multi-attempt scanning
   Future<void> _startScanning() async {
+    // Prevent scanning if already scanning, model not loaded, or camera not ready
     if (_isScanning || !_isModelLoaded || _cameraController == null) {
       print(
         'Cannot start scan: isScanning=$_isScanning, modelLoaded=$_isModelLoaded',
@@ -135,7 +137,10 @@ class _ScanScreenState extends State<ScanScreen> {
 
     print('Starting scan with $_maxAttempts attempts');
 
-    // Perform 7 attempts
+    XFile? capturedImage; // Store only the first captured image
+    Map<String, dynamic>? bestAttempt;
+
+    // Perform multiple attempts
     for (int i = 0; i < _maxAttempts; i++) {
       if (!mounted || !_isScanning) {
         print('Scan interrupted at attempt ${i + 1}');
@@ -145,7 +150,26 @@ class _ScanScreenState extends State<ScanScreen> {
       setState(() => _currentAttempt = i + 1);
       print('Scan attempt ${i + 1}/$_maxAttempts');
 
-      await _captureAndInfer();
+      // Capture and run inference
+      var result = await _captureAndInfer();
+      // result should be: { 'model': String, 'confidence': double, 'image': XFile }
+
+      if (result != null) {
+        // Save the first captured image
+        capturedImage ??= result['image'];
+
+        // Track the best confidence attempt
+        if (bestAttempt == null ||
+            result['confidence'] > bestAttempt['confidence']) {
+          bestAttempt = result;
+        }
+
+        // Update current display for UI feedback
+        setState(() {
+          _predictedClass = result['model'];
+          _confidence = result['confidence'];
+        });
+      }
 
       // Small delay between captures
       if (i < _maxAttempts - 1) {
@@ -153,48 +177,35 @@ class _ScanScreenState extends State<ScanScreen> {
       }
     }
 
-    print('Scan complete. Results: $_attemptResults');
+    print('Scan complete. Best attempt: $bestAttempt');
 
-    // Find the model with highest confidence across all attempts
-    if (_attemptResults.isNotEmpty) {
-      String bestModel = '';
-      double bestConfidence = 0.0;
+    // Finalize scan
+    setState(() => _isScanning = false);
 
-      _attemptResults.forEach((model, confidence) {
-        if (confidence > bestConfidence) {
-          bestConfidence = confidence;
-          bestModel = model;
-        }
-      });
-
-      print('Best result: $bestModel with $bestConfidence confidence');
-
-      setState(() {
-        _predictedClass = bestModel;
-        _confidence = bestConfidence;
-        _isScanning = false;
-      });
-
-      // Navigate to detail view with confidence
+    if (bestAttempt != null && capturedImage != null) {
+      // Navigate to detail view with captured image
       if (mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                CrabDetailView(model: bestModel, confidence: bestConfidence),
+            builder: (_) => CrabDetailView(
+              model: bestAttempt!['model'], // <-- ! tells Dart it's not null
+              confidence: bestAttempt!['confidence'],
+              imageFile: capturedImage, // already checked
+            ),
           ),
         ).then((_) {
-          // Reset after returning
-          setState(() {
-            _predictedClass = null;
-            _confidence = null;
-            _attemptResults.clear();
-          });
+          if (mounted) {
+            setState(() {
+              _predictedClass = null;
+              _confidence = null;
+              _attemptResults.clear();
+            });
+          }
         });
       }
     } else {
       print('No results from scanning');
-      setState(() => _isScanning = false);
 
       // Show error message
       if (mounted) {
@@ -209,14 +220,14 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   // Capture image and run inference
-  Future<void> _captureAndInfer() async {
+  Future<Map<String, dynamic>?> _captureAndInfer() async {
     if (!_isModelLoaded ||
         _cameraController == null ||
         !_cameraController!.value.isInitialized) {
       print(
         'Cannot capture: modelLoaded=$_isModelLoaded, cameraReady=${_cameraController?.value.isInitialized}',
       );
-      return;
+      return null;
     }
 
     try {
@@ -230,20 +241,14 @@ class _ScanScreenState extends State<ScanScreen> {
       img.Image? image = img.decodeImage(imageBytes);
       if (image == null) {
         print('Failed to decode image');
-        return;
+        return null;
       }
 
-      print('Image decoded: ${image.width}x${image.height}');
-
-      // Resize to 224x224 (matching your training size)
+      // Resize to 224x224
       img.Image resizedImage = img.copyResize(image, width: 224, height: 224);
-      print('Image resized to 224x224');
 
-      // Convert to Float32List with MobileNetV2 preprocessing
+      // Convert to Float32List for model
       var inputImage = _imageToByteListFloat32(resizedImage);
-      print('Image preprocessed, size: ${inputImage.length}');
-
-      // Reshape for model input: [1, 224, 224, 3]
       var input = inputImage.reshape([1, 224, 224, 3]);
 
       // Prepare output buffer
@@ -253,17 +258,12 @@ class _ScanScreenState extends State<ScanScreen> {
       ).reshape([1, _classNames.length]);
 
       // Run inference
-      print('Running inference...');
       _interpreter!.run(input, outputBuffer);
-      print('Inference complete');
 
       // Process results
       List<double> probabilities = outputBuffer[0].cast<double>();
-
-      // Get top prediction
       int maxIndex = 0;
       double maxProb = probabilities[0];
-
       for (int i = 0; i < probabilities.length; i++) {
         if (probabilities[i] > maxProb) {
           maxProb = probabilities[i];
@@ -274,22 +274,21 @@ class _ScanScreenState extends State<ScanScreen> {
       String predictedModel = _classNames[maxIndex];
       print('Predicted: $predictedModel with confidence $maxProb');
 
-      // Store if this is the highest confidence for this model
+      // Store attempt in _attemptResults
       if (!_attemptResults.containsKey(predictedModel) ||
           maxProb > _attemptResults[predictedModel]!) {
         _attemptResults[predictedModel] = maxProb;
       }
 
-      // Update current display
-      if (mounted) {
-        setState(() {
-          _predictedClass = predictedModel;
-          _confidence = maxProb;
-        });
-      }
+      return {
+        'model': predictedModel,
+        'confidence': maxProb,
+        'image': imageFile, // return captured image
+      };
     } catch (e, stackTrace) {
       print('❌ Inference error: $e');
       print('Stack trace: $stackTrace');
+      return null;
     }
   }
 
