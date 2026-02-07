@@ -78,9 +78,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               const SizedBox(height: 20),
 
               // 🖼️ Responsive Grid View
-              Expanded(
-                child: _buildContent(),
-              ),
+              Expanded(child: _buildContent()),
             ],
           ),
         ),
@@ -91,9 +89,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget _buildContent() {
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF182659),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF182659)),
       );
     }
 
@@ -102,19 +98,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
               errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
+              style: const TextStyle(fontSize: 16, color: Colors.black54),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -141,10 +130,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       return const Center(
         child: Text(
           'No crabs available',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.black54,
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.black54),
         ),
       );
     }
@@ -211,9 +197,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               color: Colors.grey[200],
                               child: Center(
                                 child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
                                       ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
+                                            loadingProgress.expectedTotalBytes!
                                       : null,
                                   color: const Color(0xFF182659),
                                 ),

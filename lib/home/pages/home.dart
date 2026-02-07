@@ -167,15 +167,15 @@ class HomeScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Navigate to Scan Crab Page'),
-                          ),
-                        );
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   const SnackBar(
+                        //     content: Text('Navigate to Scan Crab Page'),
+                        //   ),
+                        // );
                       },
                       icon: const Icon(Icons.camera_alt_rounded, size: 20),
                       label: Text(
-                        'Start Scanning',
+                        'Click the Scan Navigation',
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,

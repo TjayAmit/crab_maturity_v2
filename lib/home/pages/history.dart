@@ -1,52 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
-  // Mock data - replace with actual data from your backend/database
-  final List<CrabScanHistory> _scanHistory = const [
-    CrabScanHistory(
-      id: 1,
-      crabName: 'Blue Swimming Crab',
-      scientificName: 'Portunus pelagicus',
-      confidence: 95.8,
-      imageUrl: 'assets/crabs/blue_crab.jpg',
-      scannedAt: '2 hours ago',
-    ),
-    CrabScanHistory(
-      id: 2,
-      crabName: 'Mud Crab',
-      scientificName: 'Scylla serrata',
-      confidence: 88.3,
-      imageUrl: 'assets/crabs/mud_crab.jpg',
-      scannedAt: '5 hours ago',
-    ),
-    CrabScanHistory(
-      id: 3,
-      crabName: 'King Crab',
-      scientificName: 'Paralithodes camtschaticus',
-      confidence: 92.1,
-      imageUrl: 'assets/crabs/king_crab.jpg',
-      scannedAt: '1 day ago',
-    ),
-    CrabScanHistory(
-      id: 4,
-      crabName: 'Dungeness Crab',
-      scientificName: 'Metacarcinus magister',
-      confidence: 76.5,
-      imageUrl: 'assets/crabs/dungeness_crab.jpg',
-      scannedAt: '2 days ago',
-    ),
-    CrabScanHistory(
-      id: 5,
-      crabName: 'Snow Crab',
-      scientificName: 'Chionoecetes opilio',
-      confidence: 84.2,
-      imageUrl: 'assets/crabs/snow_crab.jpg',
-      scannedAt: '3 days ago',
-    ),
-  ];
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  List<CrabScanHistory> _scanHistory = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTransactions();
+  }
+
+  Future<void> _fetchTransactions() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://crabwatch.online/api/transactions'),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+
+        // Adjust based on your actual API response structure
+        // This assumes the response has a 'data' or 'transactions' field
+        final List<dynamic> transactions =
+            jsonData['data'] ?? jsonData['transactions'] ?? jsonData;
+
+        setState(() {
+          _scanHistory = transactions
+              .map((json) => CrabScanHistory.fromJson(json))
+              .toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Failed to load history (${response.statusCode})';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error connecting to server: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,50 +70,79 @@ class HistoryScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(
-                bottom: BorderSide(color: const Color(0xFFE5E7EB), width: 1),
+                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Scan History',
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF171717),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Scan History',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF171717),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _isLoading
+                          ? 'Loading...'
+                          : '${_scanHistory.length} scans recorded',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: const Color(0xFF525252),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_scanHistory.length} scans recorded',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: const Color(0xFF525252),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded),
+                  color: const Color(0xFFF97316),
+                  onPressed: _fetchTransactions,
                 ),
               ],
             ),
           ),
 
           // History List
-          Expanded(
-            child: _scanHistory.isEmpty
-                ? _buildEmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: _scanHistory.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      return _buildHistoryCard(_scanHistory[index], context);
-                    },
-                  ),
-          ),
+          Expanded(child: _buildBody()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFF97316)),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return _buildErrorState();
+    }
+
+    if (_scanHistory.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return RefreshIndicator(
+      color: const Color(0xFFF97316),
+      onRefresh: _fetchTransactions,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(20),
+        itemCount: _scanHistory.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          return _buildHistoryCard(_scanHistory[index], context);
+        },
       ),
     );
   }
@@ -138,18 +180,23 @@ class HistoryScreen extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  scan.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    // Fallback icon if image fails to load
-                    return const Icon(
-                      Icons.cruelty_free_rounded,
-                      size: 32,
-                      color: Color(0xFFF97316),
-                    );
-                  },
-                ),
+                child: scan.imageUrl != null
+                    ? Image.network(
+                        scan.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.cruelty_free_rounded,
+                            size: 32,
+                            color: Color(0xFFF97316),
+                          );
+                        },
+                      )
+                    : const Icon(
+                        Icons.cruelty_free_rounded,
+                        size: 32,
+                        color: Color(0xFFF97316),
+                      ),
               ),
             ),
             const SizedBox(width: 16),
@@ -170,23 +217,24 @@ class HistoryScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    scan.scientificName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: const Color(0xFF737373),
-                      fontStyle: FontStyle.italic,
+                  if (scan.scientificName != null)
+                    Text(
+                      scan.scientificName!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF737373),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.access_time_rounded,
                         size: 14,
-                        color: const Color(0xFF737373),
+                        color: Color(0xFF737373),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -280,6 +328,70 @@ class HistoryScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.error_outline_rounded,
+              size: 64,
+              color: Color(0xFFEF4444),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Oops! Something went wrong',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF171717),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              _errorMessage ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: const Color(0xFF737373),
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _fetchTransactions,
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+            label: Text(
+              'Try Again',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF97316),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getConfidenceColor(double confidence) {
     if (confidence >= 90) {
       return const Color(0xFF16A34A); // Green
@@ -305,17 +417,53 @@ class HistoryScreen extends StatelessWidget {
 class CrabScanHistory {
   final int id;
   final String crabName;
-  final String scientificName;
+  final String? scientificName;
   final double confidence;
-  final String imageUrl;
+  final String? imageUrl;
   final String scannedAt;
 
-  const CrabScanHistory({
+  CrabScanHistory({
     required this.id,
     required this.crabName,
-    required this.scientificName,
+    this.scientificName,
     required this.confidence,
-    required this.imageUrl,
+    this.imageUrl,
     required this.scannedAt,
   });
+
+  factory CrabScanHistory.fromJson(Map<String, dynamic> json) {
+    return CrabScanHistory(
+      id: json['id'] ?? 0,
+      crabName: json['crabName'] ?? json['name'] ?? 'Unknown Crab',
+      scientificName: json['scientificName'],
+      confidence: (json['confidence'] ?? 0).toDouble() * 100,
+      imageUrl: json['imageUrl'] ?? json['image'],
+      scannedAt: _formatDateTime(json['created_at'] ?? json['scanned_at']),
+    );
+  }
+
+  static String _formatDateTime(String? dateTime) {
+    if (dateTime == null) return 'Unknown';
+
+    try {
+      final DateTime dt = DateTime.parse(dateTime);
+      final Duration difference = DateTime.now().difference(dt);
+
+      if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'} ago';
+      } else if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+      } else {
+        final months = (difference.inDays / 30).floor();
+        return '$months ${months == 1 ? 'month' : 'months'} ago';
+      }
+    } catch (e) {
+      return dateTime;
+    }
+  }
 }

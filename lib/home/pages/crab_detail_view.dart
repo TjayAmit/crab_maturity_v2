@@ -95,7 +95,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
   Widget _buildContent() {
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF182659)),
+        child: CircularProgressIndicator(color: Colors.orange),
       );
     }
 
@@ -111,7 +111,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF182659),
+                color: Colors.orange,
               ),
             ),
             const SizedBox(height: 12),
@@ -127,7 +127,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF182659),
+                backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
@@ -165,7 +165,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
         SliverAppBar(
           expandedHeight: 400,
           pinned: true,
-          backgroundColor: const Color(0xFF182659),
+          backgroundColor: Colors.orange,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
@@ -217,7 +217,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                                                     loadingProgress
                                                         .expectedTotalBytes!
                                               : null,
-                                          color: const Color(0xFF182659),
+                                          color: Colors.orange,
                                         ),
                                       ),
                                     );
@@ -347,7 +347,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF182659),
+                    color: Colors.orange,
                   ),
                 ),
                 if (scientificName.isNotEmpty) ...[
@@ -399,7 +399,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF182659),
+                      color: Colors.orange,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -422,7 +422,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF182659),
+                      color: Colors.orange,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -445,7 +445,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: currentImageIndex == index
-                                    ? const Color(0xFF182659)
+                                    ? Colors.orange
                                     : Colors.transparent,
                                 width: 3,
                               ),
@@ -489,13 +489,13 @@ class _CrabDetailViewState extends State<CrabDetailView> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF182659).withOpacity(0.05),
+        color: Colors.orange.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF182659).withOpacity(0.1)),
+        border: Border.all(color: Colors.orange.withOpacity(0.1)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFF182659), size: 32),
+          Icon(icon, color: Colors.orange, size: 32),
           const SizedBox(height: 8),
           Text(
             label,
@@ -512,7 +512,7 @@ class _CrabDetailViewState extends State<CrabDetailView> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF182659),
+              color: Colors.orange,
             ),
           ),
         ],
