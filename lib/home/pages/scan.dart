@@ -341,7 +341,7 @@ class _ScanScreenState extends State<ScanScreen> {
           : !_permissionGranted
           ? _buildPermissionRequestView()
           : !_isCameraInitialized || !_isModelLoaded
-          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
           : Stack(
               fit: StackFit.expand,
               children: [
@@ -356,7 +356,7 @@ class _ScanScreenState extends State<ScanScreen> {
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: _isScanning
-                            ? Colors.amber
+                            ? Colors.orange
                             : Colors.white.withOpacity(0.5),
                         width: 3,
                       ),
@@ -416,7 +416,7 @@ class _ScanScreenState extends State<ScanScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.9),
+                        color: Colors.orange.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -458,7 +458,7 @@ class _ScanScreenState extends State<ScanScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _isScanning
                                 ? Colors.grey
-                                : Colors.amber,
+                                : Colors.orange,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 48,
@@ -517,7 +517,7 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.camera_alt, color: Colors.amber, size: 60),
+          const Icon(Icons.camera_alt, color: Colors.orange, size: 60),
           const SizedBox(height: 20),
           const Text(
             'Camera permission required',
@@ -537,7 +537,7 @@ class _ScanScreenState extends State<ScanScreen> {
           ElevatedButton(
             onPressed: _checkAndRequestPermission,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
+              backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
