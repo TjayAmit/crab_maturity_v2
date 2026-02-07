@@ -34,7 +34,8 @@ class _ScanScreenState extends State<ScanScreen> {
         await _initializeCamera();
       } else {
         setState(() {
-          _errorMessage = 'Camera permission denied. Please enable it in settings.';
+          _errorMessage =
+              'Camera permission denied. Please enable it in settings.';
         });
       }
     }
@@ -76,49 +77,44 @@ class _ScanScreenState extends State<ScanScreen> {
       body: _errorMessage != null
           ? _buildErrorView()
           : !_permissionGranted
-              ? _buildPermissionRequestView()
-              : !_isCameraInitialized
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.amber),
-                    )
-                  : Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // 📸 Camera Preview
-                        CameraPreview(_cameraController!),
+          ? _buildPermissionRequestView()
+          : !_isCameraInitialized
+          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                // 📸 Camera Preview
+                CameraPreview(_cameraController!),
 
-                        // 🟩 Center bounding box
-                        Center(
-                          child: Container(
-                            width: 250,
-                            height: 250,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Colors.amberAccent,
-                                width: 3,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-
-                        // 🔤 Instruction text
-                        Positioned(
-                          bottom: 60,
-                          left: 0,
-                          right: 0,
-                          child: Text(
-                            'Align the crab inside the box to scan',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                // 🟩 Center bounding box
+                Center(
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.orange, width: 3),
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                  ),
+                ),
+
+                // 🔤 Instruction text
+                Positioned(
+                  bottom: 60,
+                  left: 0,
+                  right: 0,
+                  child: Text(
+                    'Align the crab inside the box to scan',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 

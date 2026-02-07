@@ -17,12 +17,12 @@ class MyApp extends StatelessWidget {
     FlutterNativeSplash.remove();
 
     return MaterialApp(
-      title: 'Crab Scan',
+      title: 'Crab Watch',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const OnboardingPage()
+      home: const OnboardingPage(),
     );
   }
 }

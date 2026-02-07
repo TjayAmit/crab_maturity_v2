@@ -11,7 +11,7 @@ class OnboardingPageOne extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 🌊 Smooth wavy background
+        // 🌊 Smooth wavy background with orange gradient
         Positioned.fill(
           child: Container(
             color: Colors.white,
@@ -22,13 +22,13 @@ class OnboardingPageOne extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: [
                       Colors.white,
-                      Color(0xFFBBDEFB),
-                      Color(0xFF2196F3),
-                      Color(0x002196F3), // Transparent fade bottom
+                      Color(0xFFFED7AA), // Orange-100
+                      Color(0xFFFB923C), // Orange-400
+                      Color(0xFFF97316), // Orange-500
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: [0.0, 0.4, 0.6, 1.0],
+                    stops: [0.0, 0.4, 0.7, 1.0],
                   ),
                 ),
               ),
@@ -53,7 +53,7 @@ class OnboardingPageOne extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: const Color(0xFF171717),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -65,7 +65,7 @@ class OnboardingPageOne extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.red,
+                            color: const Color(0xFFF97316), // Orange-500
                           ),
                         ),
                         Text(
@@ -73,7 +73,7 @@ class OnboardingPageOne extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF182659),
+                            color: const Color(0xFF171717), // Neutral-900
                           ),
                         ),
                       ],
@@ -81,20 +81,7 @@ class OnboardingPageOne extends StatelessWidget {
                   ],
                 ),
 
-                SizedBox(
-                  height: 280,
-                  child: Center(
-                    child: Transform.scale(
-                      scale: 1.8,
-                      child: SvgPicture.asset(
-                        data.image,
-                        height: 400,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
-
+                SizedBox(height: 200),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text(
@@ -102,7 +89,7 @@ class OnboardingPageOne extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: Colors.black87,
+                      color: const Color(0xFF171717),
                       height: 1.5,
                     ),
                   ),

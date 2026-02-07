@@ -23,9 +23,9 @@ class OnboardingPageThree extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: [
                       Colors.white,
-                      Color(0xFFBBDEFB),
-                      Color(0xFF2196F3),
-                      Color(0x002196F3), // Transparent fade bottom
+                      Color(0xFFFED7AA), // Orange-100
+                      Color(0xFFFB923C), // Orange-400
+                      Color(0xFFF97316), // Orange-500
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -46,7 +46,7 @@ class OnboardingPageThree extends StatelessWidget {
               children: [
                 const SizedBox(height: 40),
 
-                HeaderLogo(), 
+                HeaderLogo(),
 
                 SizedBox(
                   height: 280,
@@ -68,7 +68,14 @@ class OnboardingPageThree extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(data.title, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF182659))),
+                        Text(
+                          data.title,
+                          style: GoogleFonts.poppins(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF182659),
+                          ),
+                        ),
                         Text(
                           data.description,
                           style: GoogleFonts.poppins(

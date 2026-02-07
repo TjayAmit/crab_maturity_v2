@@ -7,28 +7,17 @@ class HeaderLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center( // ⬅️ centers the whole logo horizontally & vertically (if space allows)
+    return Center(
+      // ⬅️ centers the whole logo horizontally & vertically (if space allows)
       child: SizedBox(
-        height: 120,
+        height: 80,
         width: 300, // give enough width to fit crab + text
         child: Stack(
-          alignment: Alignment.centerLeft,
           clipBehavior: Clip.none,
           children: [
-            // 🦀 Crab logo
             Positioned(
-              left:-110,
-              child: SvgPicture.asset(
-                'assets/brand/mr_crab.svg',
-                height: 230,
-                width: 230,
-              ),
-            ),
-
-            // 🩵 Text beside crab
-            Positioned(
-              left: 70, // horizontal distance from crab
-              top: 40,  // adjust to vertically align with crab if needed
+              left: 10, // horizontal distance from crab
+              top: 20, // adjust to vertically align with crab if needed
               child: Text.rich(
                 TextSpan(
                   children: [
