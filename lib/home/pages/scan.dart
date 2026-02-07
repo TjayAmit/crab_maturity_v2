@@ -79,7 +79,7 @@ class _ScanScreenState extends State<ScanScreen> {
           : !_permissionGranted
           ? _buildPermissionRequestView()
           : !_isCameraInitialized
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
           : Stack(
               fit: StackFit.expand,
               children: [
@@ -92,7 +92,7 @@ class _ScanScreenState extends State<ScanScreen> {
                     width: 250,
                     height: 250,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.orange, width: 3),
+                      border: Border.all(color: Colors.amberAccent, width: 3),
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
