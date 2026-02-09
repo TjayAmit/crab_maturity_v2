@@ -63,57 +63,60 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          // Header Section
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+    return Scaffold(
+      appBar: AppBar(title: Text('History')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header Section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Scan History',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF171717),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _isLoading
+                            ? 'Loading...'
+                            : '${_scanHistory.length} scans recorded',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color(0xFF525252),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded),
+                    color: const Color(0xFFF97316),
+                    onPressed: _fetchTransactions,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Scan History',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF171717),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _isLoading
-                          ? 'Loading...'
-                          : '${_scanHistory.length} scans recorded',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: const Color(0xFF525252),
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded),
-                  color: const Color(0xFFF97316),
-                  onPressed: _fetchTransactions,
-                ),
-              ],
-            ),
-          ),
 
-          // History List
-          Expanded(child: _buildBody()),
-        ],
+            // History List
+            Expanded(child: _buildBody()),
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -116,7 +115,6 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  // Start multi-attempt scanning
   // Start multi-attempt scanning
   Future<void> _startScanning() async {
     // Prevent scanning if already scanning, model not loaded, or camera not ready
@@ -346,6 +344,29 @@ class _ScanScreenState extends State<ScanScreen> {
               children: [
                 // 📸 Camera Preview
                 CameraPreview(_cameraController!),
+
+                // ❌ Top-right close button
+                Positioned(
+                  top: 50,
+                  right: 20,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                ),
 
                 // 🟩 Center bounding box
                 Center(
