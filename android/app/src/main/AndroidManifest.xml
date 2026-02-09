@@ -3,7 +3,7 @@
     <application
         android:label="Crab Watch"
         android:name="${applicationName}"
-        android:icon="@mipmap/logo">
+        android:icon="@mipmap/splash">
         <activity
             android:name=".MainActivity"
             android:exported="true"

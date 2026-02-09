@@ -17,14 +17,14 @@ class HeaderLogo extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             // 🦀 Crab logo
-            // Positioned(
-            //   left: -90,
-            //   child: SvgPicture.asset(
-            //     'assets/brand/mr_crab.svg',
-            //     height: 250,
-            //     width: 250,
-            //   ),
-            // ),
+            Positioned(
+              left: -90,
+              child: SvgPicture.asset(
+                'assets/brand/crab_logo.png',
+                height: 250,
+                width: 250,
+              ),
+            ),
 
             // 🩵 Text beside crab
             Positioned(

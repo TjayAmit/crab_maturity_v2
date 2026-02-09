@@ -3,7 +3,7 @@ flutter_native_splash:
   color: "#ffffff"
 
   # Main logo in the center
-  image: assets/logo/logo.png
+  image: assets/logo/crab_logo.png
 
   # Optional: you can specify a dark mode variant if you ever add one
   # color_dark: "#000000"
