@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 
 class AboutCard extends StatelessWidget {
-  final VoidCallback? onTap;
-
-  const AboutCard({super.key, this.onTap});
+  const AboutCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
+      onTap: () => Get.toNamed('/about'),
       child: Ink(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [Colors.grey.shade300, Colors.grey.shade200],
+            colors: [Colors.white, Colors.white, Colors.orange.shade100],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade300.withOpacity(0.3),
+              color: Colors.black12.withOpacity(0.1),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -57,20 +57,32 @@ class AboutCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Meet the Team',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade800,
+                  'Meet the Team'
+                      .toUpperCase(), // Uppercase adds a clean, labeled look
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.orange, // Use a primary brand color here
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   'About Us',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16, // Increased size for a clear heading
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Added a small decorative underline or accent
+                Container(
+                  height: 3,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ],

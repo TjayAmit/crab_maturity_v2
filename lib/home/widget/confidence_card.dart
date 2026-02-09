@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controller/scan_controller.dart';
+import 'package:get/get.dart';
 
 class ConfidenceCard extends StatelessWidget {
   const ConfidenceCard({super.key});
@@ -21,7 +22,7 @@ class ConfidenceCard extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () {}, // optional
+      onTap: () => Get.toNamed('/history'),
       child: Ink(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),

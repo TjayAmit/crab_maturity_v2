@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class ScanCard extends StatelessWidget {
   final VoidCallback? onTap;
@@ -9,7 +10,7 @@ class ScanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(100),
-      onTap: onTap,
+      onTap: () => Get.toNamed('/scan'),
       child: Ink(
         decoration: BoxDecoration(
           color: const Color.fromARGB(255, 255, 255, 255),

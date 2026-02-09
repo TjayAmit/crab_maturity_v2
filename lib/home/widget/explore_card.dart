@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 
 class ExploreCard extends StatelessWidget {
-  final VoidCallback? onTap;
-
-  const ExploreCard({super.key, this.onTap});
+  const ExploreCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
+      onTap: () => Get.toNamed('/explore'),
       child: Ink(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
