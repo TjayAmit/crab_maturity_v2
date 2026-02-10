@@ -1,84 +1,32 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:crab_maturity_ml_app/core/components/grab_gallery_shimmer.dart';
+import 'package:crab_maturity_ml_app/core/models/crab_model.dart';
+import 'package:crab_maturity_ml_app/home/controller/explore_controller.dart';
 import 'package:crab_maturity_ml_app/home/pages/crab_detail_view.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class ExploreScreen extends StatefulWidget {
+class ExploreScreen extends GetView<CrabListController> {
   const ExploreScreen({super.key});
-
-  @override
-  State<ExploreScreen> createState() => _ExploreScreenState();
-}
-
-class _ExploreScreenState extends State<ExploreScreen> {
-  List<dynamic> crabs = [];
-  bool isLoading = true;
-  String? errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCrabData();
-  }
-
-  Future<void> _loadCrabData() async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = null;
-      });
-
-      final response = await http.get(
-        Uri.parse('https://crabwatch.online/api/crabs'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          crabs = data['data'] ?? [];
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          errorMessage = 'Failed to load crabs: ${response.statusCode}';
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Error loading data: $e';
-        isLoading = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text('Explore')),
+      appBar: AppBar(
+        title: Text('Explore Crab', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios)),
+        backgroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '🦀 Explore Crab Gallery',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF182659),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'View different crab samples and learn more about their features.',
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-              const SizedBox(height: 20),
-
-              // 🖼️ Responsive Grid View
+              _buildSearchBar(),
+              const SizedBox(height: 16),
               Expanded(child: _buildContent()),
             ],
           ),
@@ -86,183 +34,201 @@ class _ExploreScreenState extends State<ExploreScreen> {
       ),
     );
   }
+  
+
+    Widget _buildSearchBar() {
+      return TextField(
+        onChanged: controller.updateSearch,
+        decoration: InputDecoration(
+          hintText: 'Search crabs...',
+          prefixIcon: const Icon(Icons.search, color: Colors.orange),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      );
+    }
 
   Widget _buildContent() {
-    if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF182659)),
-      );
-    }
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const CrabGalleryShimmer();
+      }
 
-    if (errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadCrabData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF182659),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
+      if (controller.errorMessage.value != null) {
+        return _ErrorState(
+          message: controller.errorMessage.value!,
+          onRetry: controller.loadCrabs,
+        );
+      }
+
+      if (controller.crabs.isEmpty) {
+        return const Center(child: Text('No crabs available'));
+      }
+
+      final crabsToShow = controller.filteredCrabs;
+
+      return RefreshIndicator(
+        onRefresh: controller.loadCrabs,
+        color: const Color(0xFF182659),
+        child: GridView.builder(
+          itemCount: crabsToShow.length, // use filteredCrabs length
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 7,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.75,
+          ),
+          itemBuilder: (_, index) {
+            final crab = crabsToShow[index]; // use same list
+            return _CrabCard(crab: crab, controller: controller);
+          },
         ),
       );
-    }
+    });
+  }
+}
 
-    if (crabs.isEmpty) {
-      return const Center(
-        child: Text(
-          'No crabs available',
-          style: TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-      );
-    }
+class _CrabCard extends StatelessWidget {
+  final Crab crab;
+  final CrabListController controller;
 
-    return RefreshIndicator(
-      onRefresh: _loadCrabData,
-      color: const Color(0xFF182659),
-      child: GridView.builder(
-        itemCount: crabs.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.75,
-        ),
-        itemBuilder: (context, index) {
-          final crab = crabs[index];
-          final attachments = crab['attachments'] as List<dynamic>? ?? [];
-          final firstImageUrl = attachments.isNotEmpty
-              ? attachments[0]['url']
-              : 'https://via.placeholder.com/300x400?text=No+Image';
-          final crabName = crab['common_name'] ?? 'Unknown Crab';
-          final scientificName = crab['scientific_name'] ?? '';
+  _CrabCard({required this.crab, required this.controller, super.key});
 
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CrabDetailView(crabId: crab['id']),
-                ),
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Image
-                  Expanded(
-                    flex: 3,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      child: Hero(
-                        tag: 'crab_${crab['id']}',
-                        child: Image.network(
-                          firstImageUrl,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                  color: const Color(0xFF182659),
-                                ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.broken_image,
-                                size: 48,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
+  // Rx to track if this image finished loading
+  final RxBool imageLoaded = false.obs;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        controller.selectCrab(crab);
+        Get.to(() => CrabDetailView(crab: controller.selectedCrab.value!));
+      },
+      child: Hero(
+        tag: 'crab_${crab.id}',
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Shimmer placeholder
+              Obx(() => !imageLoaded.value
+                  ? Shimmer.fromColors(
+                      baseColor: Colors.grey.shade300,
+                      highlightColor: Colors.grey.shade100,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                    )
+                  : const SizedBox.shrink()),
+
+              // Actual image
+             Image.network(
+                crab.firstImage,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) {
+                    // Image fully loaded → schedule state update after build
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      imageLoaded.value = true;
+                    });
+                    return child;
+                  }
+                  return const SizedBox.shrink(); // keep shimmer visible
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    imageLoaded.value = true;
+                  });
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                  );
+                },
+              ),
+
+              // Bottom-left overlay name
+              Positioned(
+                left: 8,
+                bottom: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    crab.commonName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // Info
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            crabName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF182659),
-                            ),
-                          ),
-                          if (scientificName.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              scientificName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF182659),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          );
-        },
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }

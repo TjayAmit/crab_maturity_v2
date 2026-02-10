@@ -45,6 +45,7 @@ dependencies:
   http_parser:
   provider: ^6.1.5+1
   get: ^4.7.3
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

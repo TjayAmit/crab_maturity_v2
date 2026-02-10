@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../controller/scan_controller.dart';
 import 'package:get/get.dart';
 
 class ConfidenceCard extends StatelessWidget {
@@ -14,9 +12,7 @@ class ConfidenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confidence = context.select<ScanController, int>(
-      (controller) => controller.confidence,
-    );
+    final confidence = 0;
 
     final color = _confidenceColor(confidence);
 
