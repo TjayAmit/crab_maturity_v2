@@ -13,7 +13,7 @@ class CrabDetailView extends StatelessWidget {
   final currentImageIndex = 0.obs;
 
   CrabDetailView({
-    super.key,
+    super.key, 
     this.crab,
     this.model,
     this.confidence,
@@ -26,6 +26,7 @@ class CrabDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final crabData = crab;
+    final confidenceValue = confidence != null ? (confidence! * 100).toStringAsFixed(1) : null;
 
     if (crabData == null) {
       return const Scaffold(
@@ -41,6 +42,7 @@ class CrabDetailView extends StatelessWidget {
     final description = crabData.description;
     final isPoisonous = !crabData.isPoisonous;
     final maturity = crabData.maturity;
+    final meatyInformation = crabData.meatyInformation;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -138,6 +140,33 @@ class CrabDetailView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (confidenceValue != null)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$confidenceValue% Confidence',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                color: double.tryParse(confidenceValue) != null && double.parse(confidenceValue) >= 60.0
+                                    ? Colors.green
+                                    : Colors.orange,
+                                fontWeight: FontWeight.bold,
+                                height: 1.5,
+                              ),
+                            ),
+                            Text(
+                              scientificName,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (confidenceValue == null)
+                        const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +210,7 @@ class CrabDetailView extends StatelessWidget {
                                   padding: const EdgeInsets.only(left: 8.0, top: 3.0, right: 8.0, bottom: 3.0),
                                   child: Row(
                                     children: [
-                                      Text(isPoisonous? "Not Safe":'Safe to Eat', style: GoogleFonts.poppins(fontSize: 12, color: Colors.white),),
+                                      Text(isPoisonous? "Poisonous":'Safe', style: GoogleFonts.poppins(fontSize: 12, color: Colors.white),),
                                       const SizedBox(width: 4),
                                       Icon(isPoisonous? Icons.close_rounded :Icons.check_circle, color: Colors.white, size: 14,)
                                     ],
@@ -238,6 +267,7 @@ class CrabDetailView extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            const SizedBox(width: 50),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -282,6 +312,29 @@ class CrabDetailView extends StatelessWidget {
                               ],
                             )
                           ]),
+                        const SizedBox(height: 12),
+                        if (meatyInformation.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Meaty Information',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                meatyInformation,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[700],
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
                       const SizedBox(height: 20),
 
                       // Gallery thumbnails
@@ -292,9 +345,9 @@ class CrabDetailView extends StatelessWidget {
                             const Text(
                               'Gallery',
                               style: TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.orange),
+                                  color: Colors.black),
                             ),
                             const SizedBox(height: 12),
                             SizedBox(
@@ -319,73 +372,11 @@ class CrabDetailView extends StatelessWidget {
                             ),
                           ],
                         ),
-                      // Species and Gender
-                      Row(
-                        children: [
-                          if (speciesType.isNotEmpty)
-                            Expanded(
-                              child: _buildInfoCard(
-                                  icon: Icons.category,
-                                  label: 'Species',
-                                  value: speciesType),
-                            ),
-                          if (speciesType.isNotEmpty && gender.isNotEmpty)
-                            const SizedBox(width: 12),
-                          if (gender.isNotEmpty)
-                            Expanded(
-                              child: _buildInfoCard(
-                                  icon: gender.toLowerCase() == 'male'
-                                      ? Icons.male
-                                      : Icons.female,
-                                  label: 'Gender',
-                                  value: gender),
-                            ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.withOpacity(0.1)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.orange, size: 28),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.orange,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

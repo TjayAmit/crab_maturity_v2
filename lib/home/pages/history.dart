@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'dart:convert';
 
 class HistoryScreen extends StatefulWidget {
@@ -64,7 +65,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('History')),
+      backgroundColor: const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        title: Text('History', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios)),
+        backgroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -87,7 +93,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       Text(
                         'Scan History',
                         style: GoogleFonts.poppins(
-                          fontSize: 24,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF171717),
                         ),

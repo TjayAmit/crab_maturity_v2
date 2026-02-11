@@ -1,11 +1,11 @@
-class Crab {
+class Crabs {
   final String name;
   final String commonName;
   final String scientificName;
   final Map<String, dynamic> description;
   final List<String> images;
 
-  Crab({
+  Crabs({
     required this.name,
     required this.commonName,
     required this.scientificName,
@@ -13,8 +13,8 @@ class Crab {
     required this.images,
   });
 
-  factory Crab.fromJson(Map<String, dynamic> json) {
-    return Crab(
+  factory Crabs.fromJson(Map<String, dynamic> json) {
+    return Crabs(
       name: json['name'],
       commonName: json['common_name'],
       scientificName: json['scientific_name'],

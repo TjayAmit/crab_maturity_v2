@@ -1,10 +1,11 @@
+import 'package:crab_maturity_ml_app/core/models/crab_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CrabFullView extends StatefulWidget {
-  final Map<String, dynamic> crabData;
+  final Crab crab;
 
-  const CrabFullView({super.key, required this.crabData});
+  const CrabFullView({super.key, required this.crab});
 
   @override
   State<CrabFullView> createState() => _CrabFullViewState();
@@ -15,50 +16,45 @@ class _CrabFullViewState extends State<CrabFullView> {
 
   @override
   Widget build(BuildContext context) {
-    final List<dynamic> images = widget.crabData['images'];
-    final String crabName = widget.crabData['name'];
-    final String commonName = widget.crabData['common_name'];
-    final String scientificName = widget.crabData['scientific_name'];
-    final Map<String, dynamic> description = Map<String, dynamic>.from(
-      widget.crabData['description'],
-    );
+    final List<String> images = widget.crab.attachments.isNotEmpty
+        ? widget.crab.attachments
+        : [widget.crab.firstImage];
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: CustomScrollView(
         slivers: [
-          // 🖼️ Top Image Header with Page Indicator
+          /// 🖼️ Image Header
           SliverAppBar(
             expandedHeight: 320,
             pinned: true,
             backgroundColor: Colors.white,
             foregroundColor: const Color(0xFF171717),
-            iconTheme: const IconThemeData(color: Color(0xFF171717)),
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
               background: Stack(
                 children: [
-                  Hero(
-                    tag: images[0],
-                    child: PageView.builder(
-                      itemCount: images.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentImageIndex = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final imagePath = images[index];
-                        return Image.asset(
-                          imagePath,
+                  PageView.builder(
+                    itemCount: images.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentImageIndex = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return Image.network(
+                        images[index],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (_, __, ___) => Image.network(
+                          widget.crab.firstImage,
                           fit: BoxFit.cover,
-                          width: double.infinity,
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                  // Page Indicator
+
+                  /// Page Indicator
                   if (images.length > 1)
                     Positioned(
                       bottom: 16,
@@ -69,7 +65,8 @@ class _CrabFullViewState extends State<CrabFullView> {
                         children: List.generate(
                           images.length,
                           (index) => Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 4),
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
@@ -87,7 +84,7 @@ class _CrabFullViewState extends State<CrabFullView> {
             ),
           ),
 
-          // 📖 Content Section
+          /// 📖 Content
           SliverToBoxAdapter(
             child: Container(
               color: Colors.white,
@@ -98,45 +95,38 @@ class _CrabFullViewState extends State<CrabFullView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🦀 Crab Name Header
+                        /// 🦀 Name
                         Text(
-                          crabName,
+                          widget.crab.commonName,
                           style: GoogleFonts.poppins(
                             color: const Color(0xFF171717),
                             fontSize: 28,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
+
+                        /// Scientific Name
                         Text(
-                          scientificName,
+                          widget.crab.scientificName,
                           style: GoogleFonts.poppins(
                             color: const Color(0xFF737373),
                             fontSize: 14,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
+
                         const SizedBox(height: 12),
-                        // Common Name Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF7ED),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFFED7AA)),
-                          ),
-                          child: Text(
-                            commonName,
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFF97316),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+
+                        /// Species + Gender Badge
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            _buildBadge(widget.crab.speciesType.toUpperCase()),
+                            _buildBadge(widget.crab.gender.toUpperCase()),
+                            _buildBadge(
+                                "Maturity: ${widget.crab.maturity}"),
+                          ],
                         ),
                       ],
                     ),
@@ -149,37 +139,30 @@ class _CrabFullViewState extends State<CrabFullView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 📜 Overview
+                        /// 📜 Description
                         _buildSection(
-                          title: "About",
-                          content: description['overview'] ?? '',
+                          title: "Description",
+                          content: widget.crab.description,
                           icon: Icons.info_outline_rounded,
                         ),
                         const SizedBox(height: 24),
 
-                        // 🌊 Habitat
+                        /// 🥩 Meaty Identification
                         _buildSection(
-                          title: "Habitat",
-                          content: description['habitat'] ?? '',
-                          icon: Icons.location_on_outlined,
+                          title: "Meaty Identification",
+                          content: widget.crab.meatyInformation,
+                          icon: Icons.search_rounded,
                         ),
                         const SizedBox(height: 24),
 
-                        // 🍴 Diet
+                        /// ☠️ Poison Info
                         _buildSection(
-                          title: "Diet",
-                          content: description['diet'] ?? '',
-                          icon: Icons.restaurant_outlined,
+                          title: "Poisonous",
+                          content: widget.crab.isPoisonous
+                              ? "This species is poisonous."
+                              : "This species is not poisonous.",
+                          icon: Icons.warning_amber_rounded,
                         ),
-                        const SizedBox(height: 24),
-
-                        // 🔍 Identification (optional)
-                        if (description['identification'] != null)
-                          _buildSection(
-                            title: "Identification",
-                            content: description['identification'] ?? '',
-                            icon: Icons.search_rounded,
-                          ),
 
                         const SizedBox(height: 20),
                       ],
@@ -194,7 +177,27 @@ class _CrabFullViewState extends State<CrabFullView> {
     );
   }
 
-  /// 📘 Helper widget for each content section
+  /// 🏷 Badge
+  Widget _buildBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFED7AA)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          color: const Color(0xFFF97316),
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  /// 📘 Section Builder
   Widget _buildSection({
     required String title,
     required String content,

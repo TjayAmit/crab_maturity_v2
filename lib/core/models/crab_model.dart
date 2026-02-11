@@ -7,7 +7,8 @@ class Crab {
   final String description;
   final bool isPoisonous;
   final String maturity;
-  final List<String> attachments; // list of image URLs
+  final String meatyInformation;
+  final List<String> attachments;
 
   Crab({
     required this.id,
@@ -18,6 +19,7 @@ class Crab {
     required this.description,
     required this.isPoisonous,
     required this.maturity,
+    required this.meatyInformation,
     required this.attachments,
   });
 
@@ -26,12 +28,13 @@ class Crab {
     return Crab(
       id: json['id'],
       commonName: json['common_name'] ?? 'Unknown Crab',
-      scientificName: json['scientific_name'] ?? '',
+      scientificName: json['scientific_name'] ?? '',  
       speciesType: json['species_type'] ?? '',
       gender: json['gender'] ?? '',
       description: json['description'] ?? '',
-      isPoisonous: json['is_poisonous'] == 1,
+      isPoisonous: json['is_poisonous'] == '0',
       maturity: json['maturity_cycle'],
+      meatyInformation: json['meaty_information'] ?? '',
       attachments: attachmentsData
           .map<String>((e) => e['url'] as String)
           .toList(), // extract URLs

@@ -150,14 +150,14 @@ class ScanController extends GetxController {
 
       // ── 4. Send to backend ──────────────────────────────
       scanPhase.value = ScanPhase.fetchingData;
-      await submitScanResult(image: imageFile);
+      final result =await submitScanResult(image: imageFile);
 
       // ── 5. Success ──────────────────────────────────────
       if (crab.value != null) {
-        Get.to(() => CrabDetailView(
-              crab: crab.value!,
-              confidence: confidence.value ?? 0.0,
-            ));
+        Get.off(() => CrabDetailView(
+          crab: result['crab'] as Crab,
+          confidence: result['confidence'] as double
+        ));
       } else {
         errorMessage.value = 'No crab data received from server';
       }
@@ -182,52 +182,57 @@ class ScanController extends GetxController {
   }
 
   // ================= API =================
-  Future<void> submitScanResult({
+  Future<Map<String, dynamic>> submitScanResult({
     required XFile image,
   }) async {
     try {
       final uri = Uri.parse('https://crabwatch.online/api/crabs-by-image');
 
-      // Create multipart request
       final request = http.MultipartRequest('POST', uri)
         ..files.add(
           await http.MultipartFile.fromPath(
             'file',
             image.path,
             filename: image.name,
-            contentType: MediaType('image', 'jpeg'), // optional, server may infer
+            contentType: MediaType('image', 'jpeg'),
           ),
         )
         ..headers.addAll({
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          // ❌ REMOVE Content-Type when using MultipartRequest
         });
 
-      // Send the request
       final streamedResponse = await request.send();
-
-      // Convert StreamedResponse to Response for easier handling
       final response = await http.Response.fromStream(streamedResponse);
 
-      // Check for errors
       if (response.statusCode != 200) {
         throw Exception(
           'Failed to submit scan: ${response.statusCode}\n${response.body}',
         );
       }
 
-      // Parse JSON
       final decoded = jsonDecode(response.body);
 
-      // Update controller state
       final crabController = Get.find<ScanController>();
-      crabController.crab.value = Crab.fromJson(decoded['data']);
-      crabController.confidence.value = (decoded['confidence'] as num).toDouble();
-      crabController.confidenceLevel.value = decoded['confidence_level'];
+      crabController.crab.value =
+          Crab.fromJson(decoded['data']);
+      crabController.confidence.value =
+          (decoded['meta']['confidence'] as num).toDouble();
+      crabController.confidenceLevel.value =
+          decoded['meta']['confidence_level'] as String;
+
+      /// ✅ Return Map (Correct Dart syntax)
+      return {
+        'crab': crabController.crab.value,
+        'confidence': crabController.confidence.value,
+        'confidenceLevel': crabController.confidenceLevel.value,
+      };
+
     } catch (e) {
       throw Exception('Error submitting scan: $e');
     }
   }
+
 
   // ================= LOCAL ML =================
   Future<Map<String, dynamic>?> captureAndInfer() async {

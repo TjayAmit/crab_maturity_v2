@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -8,7 +9,11 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      appBar: AppBar(title: Text('About')),
+      appBar: AppBar(
+        title: Text('History', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+        leading: IconButton(onPressed: () => Get.back(), icon: Icon(Icons.arrow_back_ios)),
+        backgroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -80,7 +85,7 @@ class AboutScreen extends StatelessWidget {
                 icon: Icons.people_outline_rounded,
                 title: 'Development Team',
                 content:
-                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul\n• Aim Convocar\n• Pedro Reyes\n• Fred Tan\n\nGuided by: Sir Sherards, Project Adviser',
+                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul\n• Aim Convocar\n• Pedro Reyes\n\nGuided by: Sir Sherards, Project Adviser',
               ),
               const SizedBox(height: 24),
 
