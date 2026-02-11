@@ -133,33 +133,33 @@ class ScanScreen extends StatelessWidget {
           ),
 
             // Loading label
-            Positioned(
-              bottom: 120,
-              left: 40,
-              right: 40,
-              child: Obx(() {
-                if (controller.scanPhase.value == ScanPhase.idle) {
-                  return const SizedBox.shrink();
-                }
+            // Positioned(
+            //   bottom: 120,
+            //   left: 40,
+            //   right: 40,
+            //   child: Obx(() {
+            //     if (controller.scanPhase.value == ScanPhase.idle) {
+            //       return const SizedBox.shrink();
+            //     }
 
-                String text = '';
-                switch (controller.scanPhase.value) {
-                  case ScanPhase.scanning:
-                    text = 'Capturing...';
-                    break;
-                  case ScanPhase.identifying:
-                    text = 'Analyzing crab...';
-                    break;
-                  case ScanPhase.fetchingData:
-                    text = 'Loading crab information...';
-                    break;
-                  default:
-                    text = 'Processing...';
-                }
+            //     String text = '';
+            //     switch (controller.scanPhase.value) {
+            //       case ScanPhase.scanning:
+            //         text = 'Capturing...';
+            //         break;
+            //       case ScanPhase.identifying:
+            //         text = 'Analyzing crab...';
+            //         break;
+            //       case ScanPhase.fetchingData:
+            //         text = 'Loading crab information...';
+            //         break;
+            //       default:
+            //         text = 'Processing...';
+            //     }
 
-                return _loadingLabel(text);
-              }),
-            ),
+            //     return _loadingLabel(text);
+            //   }),
+            // ),
 
             // Scan button
             Positioned(
@@ -194,12 +194,29 @@ class ScanScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Text(
-                              'Scanning...',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            Obx(() {
+                              String text;
+                              switch (controller.scanPhase.value) {
+                                case ScanPhase.scanning:
+                                  text = 'Capturing...';
+                                  break;
+                                case ScanPhase.identifying:
+                                  text = 'Analyzing crab...';
+                                  break;
+                                case ScanPhase.fetchingData:
+                                  text = 'Loading crab information...';
+                                  break;
+                                default:
+                                  text = 'Processing...';
+                              }
+
+                              return Text(
+                                text,
+                                style: const TextStyle(
+                                    fontSize: 16, 
+                                    fontWeight: FontWeight.bold),
+                              );
+                            }),
                           ] else
                             const Text(
                               'Start Scan',

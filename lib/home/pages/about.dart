@@ -85,7 +85,7 @@ class AboutScreen extends StatelessWidget {
                 icon: Icons.people_outline_rounded,
                 title: 'Development Team',
                 content:
-                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul\n• Aim Convocar\n• Pedro Reyes\n\nGuided by: Sir Sherards, Project Adviser',
+                    'Developed by the CrabWatch Team:\n\n• Jaythoon Sahibul\n• Aim Convocar\n• Alfred Tan\n\nGuided by: Sir Sherard, Project Adviser',
               ),
               const SizedBox(height: 24),
 

@@ -12,7 +12,7 @@ class ConfidenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confidence = 0;
+    final confidence = 70;
 
     final color = _confidenceColor(confidence);
 
