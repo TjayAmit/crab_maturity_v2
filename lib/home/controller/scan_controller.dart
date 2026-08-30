@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:crab_maturity_ml_app/core/models/crab_model.dart';
 import 'package:crab_maturity_ml_app/home/pages/crab_detail_view.dart';
+import 'package:flutter/material.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -18,12 +19,12 @@ enum ScanPhase {
   fetchingData,
 }
 
-class ScanController extends GetxController {
+class ScanController extends GetxController with WidgetsBindingObserver {
   CameraController? cameraController;
   final double confidenceThreshold = 0.30;
 
   final crab = Rxn<Crab>();
-  final confidence = RxnDouble(); // 0–100 (backend)
+  final confidence = RxnDouble();
   final confidenceLevel = RxnString();
 
   final scanPhase = ScanPhase.idle.obs;
@@ -32,8 +33,6 @@ class ScanController extends GetxController {
   final permissionGranted = false.obs;
   final errorMessage = RxnString();
   final capturedImage = Rxn<XFile>();
-  final cameraClosed = false.obs;
-  final isPreviewActive = true.obs;
 
   Interpreter? interpreter;
   final isModelLoaded = false.obs;
@@ -48,8 +47,36 @@ class ScanController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     loadModel();
     checkPermission();
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    cameraController?.dispose();
+    cameraController = null;
+    interpreter?.close();
+    super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (cameraController == null || !cameraController!.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      cameraController?.dispose();
+      cameraController = null;
+      isCameraInitialized.value = false;
+    } else if (state == AppLifecycleState.resumed) {
+      if (permissionGranted.value) {
+        initCamera();
+      }
+    }
   }
 
   // ================= MODEL =================
@@ -70,7 +97,8 @@ class ScanController extends GetxController {
 
       isModelLoaded.value = true;
     } catch (e) {
-      errorMessage.value = 'Failed to load AI model';
+      // Model loading fallback - remote API is primary
+      isModelLoaded.value = true;
     }
   }
 
@@ -89,33 +117,54 @@ class ScanController extends GetxController {
         await initCamera();
       } else {
         errorMessage.value =
-            'Camera permission denied. Enable it in settings.';
+            'Camera permission is required. Please enable it in system settings.';
       }
     }
   }
 
   Future<void> initCamera() async {
     try {
-      final cameras = await availableCameras();
-      final backCamera =
-          cameras.firstWhere((c) => c.lensDirection == CameraLensDirection.back);
+      isCameraInitialized.value = false;
+      if (cameraController != null) {
+        await cameraController!.dispose();
+        cameraController = null;
+      }
 
-      cameraController = CameraController(
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        errorMessage.value = 'No camera found on this device.';
+        return;
+      }
+
+      final backCamera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      final controller = CameraController(
         backCamera,
         ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
 
-      await cameraController!.initialize();
+      await controller.initialize();
+      cameraController = controller;
       isCameraInitialized.value = true;
-      isPreviewActive.value = true;
+      errorMessage.value = null;
     } catch (e) {
-      errorMessage.value = 'Failed to initialize camera';
+      errorMessage.value = 'Failed to initialize camera. Tap Retry.';
     }
   }
 
+  void resetScanState() {
+    capturedImage.value = null;
+    scanPhase.value = ScanPhase.idle;
+    errorMessage.value = null;
+  }
+
   // ================= SCAN FLOW =================
+
   Future<void> startScanAndSubmit() async {
     if (isScanning) return;
 
@@ -124,49 +173,41 @@ class ScanController extends GetxController {
     capturedImage.value = null;
     crab.value = null;
     predictedClass.value = null;
-    cameraClosed.value = false;
 
     try {
       // ── 1. Capture photo ────────────────────────────────
       final XFile? imageFile = await _safeTakePicture();
-      
       if (imageFile == null) {
-        throw Exception('Failed to capture image');
+        throw Exception('Failed to capture photo. Please try again.');
       }
 
-      // Show captured image immediately
-      capturedImage.value = imageFile;  
-      isPreviewActive.value = false;
-      cameraClosed.value = true;
-
-      // ── 2. Close camera right after capture ─────────────
-      await cameraController?.pausePreview(); // optional, helps some devices
-      await cameraController?.dispose();
-      cameraController = null;
-
-      await Future.delayed(const Duration(milliseconds: 80));
+      // Freeze frame via Flutter UI overlay without touching native Camera2 stream
+      capturedImage.value = imageFile;
 
       scanPhase.value = ScanPhase.identifying;
+      await Future.delayed(const Duration(milliseconds: 300));
 
-      // ── 4. Send to backend ──────────────────────────────
+      // ── 2. Send to backend ──────────────────────────────
       scanPhase.value = ScanPhase.fetchingData;
-      final result =await submitScanResult(image: imageFile);
+      await submitScanResult(image: imageFile);
 
-      // ── 5. Success ──────────────────────────────────────
+      // ── 3. Success ──────────────────────────────────────
       if (crab.value != null) {
-        Get.off(() => CrabDetailView(
-          crab: result['crab'] as Crab,
-          confidence: result['confidence'] as double
-        ));
+        await Get.to(() => CrabDetailView(
+              crab: crab.value!,
+              confidence: confidence.value ?? 0.0,
+              imageFile: imageFile,
+            ));
+        // Reset image overlay when returning from detail page
+        resetScanState();
       } else {
-        errorMessage.value = 'No crab data received from server';
+        errorMessage.value = 'No crab identified from image. Try another angle.';
       }
     } catch (e) {
-      errorMessage.value = 'Error: ${e.toString().split('\n').first}';
+      errorMessage.value =
+          e.toString().replaceAll('Exception: ', '').split('\n').first;
     } finally {
       scanPhase.value = ScanPhase.idle;
-      // Optional: re-init camera if you want to allow immediate re-scan
-      // if (errorMessage.value != null) await initCamera();
     }
   }
 
@@ -182,59 +223,75 @@ class ScanController extends GetxController {
   }
 
   // ================= API =================
-  Future<Map<String, dynamic>> submitScanResult({
+
+  Future<void> submitScanResult({
     required XFile image,
   }) async {
     try {
       final uri = Uri.parse('https://crabwatch.online/api/crabs-by-image');
 
+      // Create multipart request
       final request = http.MultipartRequest('POST', uri)
         ..files.add(
           await http.MultipartFile.fromPath(
             'file',
             image.path,
-            filename: image.name,
+            filename: image.name.isNotEmpty ? image.name : 'crab_scan.jpg',
             contentType: MediaType('image', 'jpeg'),
           ),
         )
         ..headers.addAll({
           'Accept': 'application/json',
-          // ❌ REMOVE Content-Type when using MultipartRequest
         });
 
-      final streamedResponse = await request.send();
+      // Send the request with timeout
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception(
+              'Connection timed out. Please check your internet connection.');
+        },
+      );
+
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to submit scan: ${response.statusCode}\n${response.body}',
-        );
+        try {
+          final errorJson = jsonDecode(response.body);
+          final msg = errorJson['message'] ?? errorJson['error'];
+          if (msg != null) throw Exception(msg);
+        } catch (e) {
+          if (e is Exception && !e.toString().contains('FormatException')) {
+            rethrow;
+          }
+        }
+        throw Exception('Server error (${response.statusCode})');
       }
 
       final decoded = jsonDecode(response.body);
 
-      final crabController = Get.find<ScanController>();
-      crabController.crab.value =
-          Crab.fromJson(decoded['data']);
-      crabController.confidence.value =
-          (decoded['meta']['confidence'] as num).toDouble();
-      crabController.confidenceLevel.value =
-          decoded['meta']['confidence_level'] as String;
+      if (decoded['data'] == null) {
+        throw Exception('No crab classification data returned');
+      }
 
-      /// ✅ Return Map (Correct Dart syntax)
-      return {
-        'crab': crabController.crab.value,
-        'confidence': crabController.confidence.value,
-        'confidenceLevel': crabController.confidenceLevel.value,
-      };
+      crab.value = Crab.fromJson(decoded['data']);
 
+      final rawConf = decoded['confidence'];
+      if (rawConf != null) {
+        final double parsedConf = (rawConf as num).toDouble();
+        confidence.value = parsedConf <= 1.0 ? parsedConf * 100.0 : parsedConf;
+      } else {
+        confidence.value = 0.0;
+      }
+
+      confidenceLevel.value = decoded['confidence_level'];
     } catch (e) {
-      throw Exception('Error submitting scan: $e');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-
   // ================= LOCAL ML =================
+
   Future<Map<String, dynamic>?> captureAndInfer() async {
     if (!isModelLoaded.value ||
         cameraController == null ||
@@ -242,36 +299,40 @@ class ScanController extends GetxController {
       return null;
     }
 
-    final imageFile = await cameraController!.takePicture();
-    final bytes = await imageFile.readAsBytes();
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) return null;
+    try {
+      final imageFile = await cameraController!.takePicture();
+      final bytes = await imageFile.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return null;
 
-    final resized = img.copyResize(decoded, width: 224, height: 224);
-    final input = _imageToFloat32(resized).reshape([1, 224, 224, 3]);
+      final resized = img.copyResize(decoded, width: 224, height: 224);
+      final input = _imageToFloat32(resized).reshape([1, 224, 224, 3]);
 
-    final output = List.filled(classNames.length, 0.0)
-        .reshape([1, classNames.length]);
+      final output = List.filled(classNames.length, 0.0)
+          .reshape([1, classNames.length]);
 
-    interpreter!.run(input, output);
+      interpreter!.run(input, output);
 
-    final probs = output[0].cast<double>();
-    int maxIndex = 0;
-    double maxProb = probs[0];
+      final probs = output[0].cast<double>();
+      int maxIndex = 0;
+      double maxProb = probs[0];
 
-    for (int i = 1; i < probs.length; i++) {
-      if (probs[i] > maxProb) {
-        maxProb = probs[i];
-        maxIndex = i;
+      for (int i = 1; i < probs.length; i++) {
+        if (probs[i] > maxProb) {
+          maxProb = probs[i];
+          maxIndex = i;
+        }
       }
+
+      predictedClass.value = classNames[maxIndex];
+
+      return {
+        'confidence': maxProb,
+        'image': imageFile,
+      };
+    } catch (e) {
+      return null;
     }
-
-    predictedClass.value = classNames[maxIndex];
-
-    return {
-      'confidence': maxProb,
-      'image': imageFile,
-    };
   }
 
   Float32List _imageToFloat32(img.Image image) {
@@ -287,12 +348,5 @@ class ScanController extends GetxController {
       }
     }
     return buffer;
-  }
-
-  @override
-  void onClose() {
-    cameraController?.dispose();
-    interpreter?.close();
-    super.onClose();
   }
 }

@@ -1,9 +1,8 @@
-// scan_screen.dart
 import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:crab_maturity_ml_app/home/controller/scan_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 
 class ScanScreen extends StatelessWidget {
@@ -14,219 +13,263 @@ class ScanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Obx(() {
-        // Error state
-        if (controller.errorMessage.value != null) {
-          return _error(controller.errorMessage.value!);
-        }
-
         // Permission state
         if (!controller.permissionGranted.value) {
-          return _permission(controller);
+          return _buildPermissionView(controller);
         }
 
-        // Loading state (camera/model)
-        if (!controller.isCameraInitialized.value ||
-            !controller.isModelLoaded.value) {
+        // Initial loading state
+        if (!controller.isCameraInitialized.value) {
+          if (controller.errorMessage.value != null) {
+            return _buildErrorView(controller.errorMessage.value!, controller);
+          }
           return const Center(
-            child: CircularProgressIndicator(color: Colors.orange),
+            child: CircularProgressIndicator(color: Color(0xFFF97316)),
           );
         }
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            // Background (white after capture)
-            Obx(() {
-              final hasImage = controller.capturedImage.value != null;
-              final isClosed = controller.cameraClosed.value;
-
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeInOut,
-                color: hasImage
-                    ? Colors.white
-                    : (isClosed ? Colors.grey.shade900 : Colors.black),
-              );
-            }),
-
-            // Camera preview
+            // Live Camera Preview
             if (controller.cameraController != null &&
-                !controller.cameraClosed.value &&
-                controller.isCameraInitialized.value &&
                 controller.cameraController!.value.isInitialized)
-              Builder(
-                builder: (context) {
-                  if (!controller.cameraController!.value.isInitialized) {
-                    return const SizedBox();
-                  }
-                  return CameraPreview(controller.cameraController!);
-                },
+              CameraPreview(controller.cameraController!)
+            else
+              Container(color: Colors.black),
+
+            // Captured Image Overlay (during processing)
+            if (controller.capturedImage.value != null)
+              Image.file(
+                File(controller.capturedImage.value!.path),
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
               ),
 
-            // Scan box / captured avatar
+            // Dark gradient overlay for readability
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.55),
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.75),
+                  ],
+                  stops: const [0.0, 0.2, 0.7, 1.0],
+                ),
+              ),
+            ),
+
+            // Top Bar: Back button and Title
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: () => Get.back(),
+                    ),
+                  ),
+                  Text(
+                    'Scan Crab',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 44),
+                ],
+              ),
+            ),
+
+            // Center Framing Reticle
             Center(
               child: Obx(() {
-                final isProcessing = controller.scanPhase.value != ScanPhase.idle;
-                final hasImage = controller.capturedImage.value != null;
+                final isProcessing =
+                    controller.scanPhase.value != ScanPhase.idle;
 
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
-                  child: Container(
-                    key: ValueKey<bool>(hasImage), // helps AnimatedSwitcher
-                    width: isProcessing ? 290 : 260,
-                    height: isProcessing ? 290 : 260,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: isProcessing ? Colors.orange : Colors.white.withOpacity(0.6),
-                        width: isProcessing ? 6 : 3,
-                      ),
-                      boxShadow: isProcessing
-                          ? [
-                              BoxShadow(
-                                color: Colors.orange.withOpacity(0.5),
-                                blurRadius: 20,
-                                spreadRadius: 6,
-                              ),
-                              BoxShadow(
-                                color: Colors.orange.withOpacity(0.2),
-                                blurRadius: 30,
-                                spreadRadius: 12,
-                              ),
-                            ]
-                          : null,
-                      image: hasImage
-                          ? DecorationImage(
-                              image: FileImage(File(controller.capturedImage.value!.path)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                return Container(
+                  width: 270,
+                  height: 270,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isProcessing
+                          ? const Color(0xFFF97316)
+                          : Colors.white.withValues(alpha: 0.8),
+                      width: isProcessing ? 4 : 2.5,
                     ),
-                    child: !hasImage && isProcessing
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.orange,
-                              strokeWidth: 3,
+                    boxShadow: isProcessing
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFF97316).withValues(alpha: 0.4),
+                              blurRadius: 24,
+                              spreadRadius: 4,
                             ),
-                          )
+                          ]
                         : null,
                   ),
                 );
               }),
             ),
-            // Top result
-           Positioned(
-            top: 60,
-            right: 20,
-            child: Obx(() {
-              if (controller.predictedClass.value == null ||
-                  controller.scanPhase.value != ScanPhase.idle) {
-                return const SizedBox.shrink();
-              }
-              return _result(controller);
-            }),
-          ),
 
-            // Loading label
-            // Positioned(
-            //   bottom: 120,
-            //   left: 40,
-            //   right: 40,
-            //   child: Obx(() {
-            //     if (controller.scanPhase.value == ScanPhase.idle) {
-            //       return const SizedBox.shrink();
-            //     }
+            // Error Banner Overlay if error occurs
+            if (controller.errorMessage.value != null &&
+                controller.scanPhase.value == ScanPhase.idle)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 64,
+                left: 20,
+                right: 20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          color: Colors.white, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          controller.errorMessage.value!,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white, size: 18),
+                        onPressed: () => controller.resetScanState(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
-            //     String text = '';
-            //     switch (controller.scanPhase.value) {
-            //       case ScanPhase.scanning:
-            //         text = 'Capturing...';
-            //         break;
-            //       case ScanPhase.identifying:
-            //         text = 'Analyzing crab...';
-            //         break;
-            //       case ScanPhase.fetchingData:
-            //         text = 'Loading crab information...';
-            //         break;
-            //       default:
-            //         text = 'Processing...';
-            //     }
-
-            //     return _loadingLabel(text);
-            //   }),
-            // ),
-
-            // Scan button
+            // Instructional Subtitle / Progress Status
             Positioned(
-              bottom: 40,
+              bottom: 124,
+              left: 32,
+              right: 32,
+              child: Obx(() {
+                if (controller.scanPhase.value != ScanPhase.idle) {
+                  String label = 'Processing...';
+                  switch (controller.scanPhase.value) {
+                    case ScanPhase.scanning:
+                      label = 'Capturing photo...';
+                      break;
+                    case ScanPhase.identifying:
+                      label = 'Analyzing crab species...';
+                      break;
+                    case ScanPhase.fetchingData:
+                      label = 'Retrieving crab information...';
+                      break;
+                    default:
+                      label = 'Processing scan...';
+                  }
+                  return _buildProcessingLabel(label);
+                }
+
+                return Text(
+                  'Align the crab inside the frame and tap Scan',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                );
+              }),
+            ),
+
+            // Scan Action Button
+            Positioned(
+              bottom: 36,
               left: 0,
               right: 0,
               child: Center(
-                child: ElevatedButton(
-                  onPressed: controller.scanPhase.value != ScanPhase.idle
-                      ? null
-                      : controller.startScanAndSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: controller.isScanning
-                        ? Colors.grey
-                        : Colors.orange,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 56, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                  ),
-                  child: Obx(() => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (controller.isScanning) ...[
-                            const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Obx(() {
-                              String text;
-                              switch (controller.scanPhase.value) {
-                                case ScanPhase.scanning:
-                                  text = 'Capturing...';
-                                  break;
-                                case ScanPhase.identifying:
-                                  text = 'Analyzing crab...';
-                                  break;
-                                case ScanPhase.fetchingData:
-                                  text = 'Loading crab information...';
-                                  break;
-                                default:
-                                  text = 'Processing...';
-                              }
+                child: Obx(() {
+                  final isScanning = controller.isScanning;
 
-                              return Text(
-                                text,
-                                style: const TextStyle(
-                                    fontSize: 16, 
-                                    fontWeight: FontWeight.bold),
-                              );
-                            }),
-                          ] else
-                            const Text(
-                              'Start Scan',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
+                  return ElevatedButton(
+                    onPressed: isScanning
+                        ? null
+                        : controller.startScanAndSubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isScanning
+                          ? const Color(0xFF9CA3AF)
+                          : const Color(0xFFF97316),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 48,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      elevation: 4,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isScanning) ...[
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
                             ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Scanning...',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ] else ...[
+                          const Icon(Icons.camera_alt_rounded, size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Scan Crab',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
-                      )),
-                ),
+                      ],
+                    ),
+                  );
+                }),
               ),
             ),
           ],
@@ -235,51 +278,32 @@ class ScanScreen extends StatelessWidget {
     );
   }
 
-  Widget _loadingLabel(String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-  Widget _result(ScanController c) {
+  Widget _buildProcessingLabel(String text) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            c.predictedClass.value!,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFFF97316),
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Identified',
-            style: TextStyle(
-              color: Colors.orange,
+          const SizedBox(width: 10),
+          Text(
+            text,
+            style: GoogleFonts.poppins(
               fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
           ),
         ],
@@ -287,18 +311,148 @@ class ScanScreen extends StatelessWidget {
     );
   }
 
-  Widget _error(String msg) => Center(
-        child: Text(
-          msg,
-          style: const TextStyle(color: Colors.white),
-          textAlign: TextAlign.center,
+  Widget _buildErrorView(String msg, ScanController c) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 52,
+                color: Color(0xFFEF4444),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Camera Initialization Error',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              msg,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFFD1D5DB),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton(
+                  onPressed: () => Get.back(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFF6B7280)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Go Back',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => c.initCamera(),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(
+                    'Retry',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF97316),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
-  Widget _permission(ScanController c) => Center(
-        child: ElevatedButton(
-          onPressed: c.checkPermission,
-          child: const Text('Grant Camera Permission'),
+  Widget _buildPermissionView(ScanController c) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.camera_alt_outlined,
+              size: 56,
+              color: Color(0xFFF97316),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Camera Access Needed',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please allow camera permission so you can take photos of crabs for identification.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFFD1D5DB),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: c.checkPermission,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF97316),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Grant Camera Permission',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }
